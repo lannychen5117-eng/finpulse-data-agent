@@ -1,0 +1,13 @@
+yfinance
+pandas
+langchain
+langchain-community
+langchain-nvidia-ai-endpoints
+python-dotenv
+streamlit
+plotly
+scipy
+numpy
+requests
+beautifulsoup4
+urllib3<2.0
