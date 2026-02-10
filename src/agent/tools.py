@@ -55,8 +55,13 @@ def technical_analysis_tool(ticker: str) -> str:
         df = add_technical_indicators(df)
         summary = get_analysis_summary(df)
         
-        return f"Technical Indicators for {ticker}:\n" + \
-               "\n".join([f"{k}: {v:.2f}" if isinstance(v, float) else f"{k}: {v}" for k, v in summary.items()])
+        # Format as Markdown Table
+        table = "| Indicator | Value |\n|---|---|\n"
+        for k, v in summary.items():
+            val = f"{v:.2f}" if isinstance(v, float) else f"{v}"
+            table += f"| {k} | {val} |\n"
+            
+        return f"### Technical Analysis for {ticker}\n\n{table}"
     except Exception as e:
         return f"Error in technical analysis: {e}"
 
@@ -72,13 +77,14 @@ def fundamental_analysis_tool(ticker: str) -> str:
         metrics = analysis.get("metrics", {})
         signals = analysis.get("signals", [])
         
-        output = f"Fundamentals for {ticker}:\n"
+        # Format as Markdown Table
+        output = f"### Fundamentals for {ticker}\n\n| Metric | Value |\n|---|---|\n"
         for k, v in metrics.items():
             val = f"{v:.2f}" if isinstance(v, float) else str(v)
-            output += f"- {k}: {val}\n"
+            output += f"| {k} | {val} |\n"
             
         if signals:
-            output += "\nSignals:\n" + "\n".join([f"- {s}" for s in signals])
+            output += "\n**Signals:**\n" + "\n".join([f"- {s}" for s in signals])
             
         return output
     except Exception as e:
@@ -95,11 +101,107 @@ def macro_data_tool() -> str:
     except Exception as e:
         return f"Error fetching macro data: {e}"
 
+from src.data.fund import add_subscription, remove_subscription, list_subscriptions, analyze_all_subscriptions, analyze_fund
+
+@tool
+def add_fund_tool(ticker: str) -> str:
+    """
+    Subscribe to a fund or stock for monitoring.
+    Supports US (e.g., SPY), HK (e.g., 2800.HK), and CN funds (e.g., 000001, 510300).
+    """
+    return add_subscription(ticker)
+
+@tool
+def remove_fund_tool(ticker: str) -> str:
+    """
+    Unsubscribe from a fund or stock.
+    """
+    return remove_subscription(ticker)
+
+@tool
+def list_funds_tool() -> str:
+    """
+    List all currently subscribed funds.
+    """
+    funds = list_subscriptions()
+    if not funds:
+        return "No subscriptions found."
+    return f"Subscribed funds: {', '.join(funds)}"
+
+@tool
+def analyze_funds_tool() -> str:
+    """
+    Analyze all subscribed funds and generate a report with Buy/Sell/Hold recommendations.
+    """
+    return analyze_all_subscriptions()
+
+@tool
+def analyze_fund_tool(ticker: str) -> str:
+    """
+    Analyze a specific fund or stock (no subscription required).
+    Supports Chinese funds (e.g., 000001), ETFs, and US stocks.
+    Returns price, RSI, MACD, and recommendation.
+    """
+    result = analyze_fund(ticker)
+    if "error" in result:
+        return f"Error analyzing {ticker}: {result['error']}"
+        
+    return (f"Analysis for {result['ticker']}:\n"
+            f"Price: {result['price']:.2f}\n"
+            f"RSI: {result['rsi']:.2f}\n"
+            f"MACD: {result['macd']:.2f}\n"
+            f"Recommendation: {result['recommendation']}\n"
+            f"Reason: {result['reason']}")
+
+from src.data.futures import get_future_history
+from src.analysis.technical import add_technical_indicators
+
+@tool
+def analyze_futures_tool(symbol: str, market: str = "AUTO") -> str:
+    """
+    Analyze a Futures contract.
+    Args:
+        symbol: The ticker (e.g., 'RB0' for Rebar, 'GC=F' for Gold).
+        market: 'CN', 'GLOBAL', or 'AUTO'.
+    """
+    try:
+        df = get_future_history(symbol, market)
+        if df.empty:
+            return f"No data found for future: {symbol}"
+            
+        # Add technicals
+        df = add_technical_indicators(df)
+        latest = df.iloc[-1]
+        
+        rsi = latest['RSI']
+        macd = latest['MACD']
+        price = latest['Close']
+        
+        recommendation = "HOLD"
+        if rsi < 30: recommendation = "BUY"
+        elif rsi > 70: recommendation = "SELL"
+        elif macd > latest['MACD_signal']: recommendation = "BUY"
+        elif macd < latest['MACD_signal']: recommendation = "SELL"
+        
+        return (f"Futures Analysis for {symbol} ({market}):\n"
+                f"Price: {price:.2f}\n"
+                f"RSI: {rsi:.2f}\n"
+                f"MACD: {macd:.2f}\n"
+                f"Recommendation: {recommendation}")
+    except Exception as e:
+        return f"Error analyzing future {symbol}: {e}"
+
 # Export list of tools
 TOOLS = [
     stock_price_tool,
     stock_news_tool,
     technical_analysis_tool,
     fundamental_analysis_tool,
-    macro_data_tool
+    macro_data_tool,
+    add_fund_tool,
+    remove_fund_tool,
+    list_funds_tool,
+    analyze_funds_tool,
+    analyze_fund_tool,
+    analyze_futures_tool
 ]

@@ -15,8 +15,12 @@ def get_stock_history(ticker: str, period: str = "1y", interval: str = "1d") -> 
         pd.DataFrame: A DataFrame containing the historical data.
     """
     stock = yf.Ticker(ticker)
-    history = stock.history(period=period, interval=interval)
-    return history
+    try:
+        history = stock.history(period=period, interval=interval)
+        return history
+    except (TypeError, ValueError, IndexError) as e:
+        print(f"Error fetching data for {ticker}: {e}")
+        return pd.DataFrame()
 
 def get_stock_info(ticker: str) -> Dict[str, Any]:
     """

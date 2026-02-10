@@ -3,6 +3,8 @@ pandas
 langchain
 langchain-community
 langchain-nvidia-ai-endpoints
+langchain-core
+langgraph
 python-dotenv
 streamlit
 plotly
@@ -11,3 +13,4 @@ numpy
 requests
 beautifulsoup4
 urllib3<2.0
+akshare
